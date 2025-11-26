@@ -172,24 +172,46 @@ function QRGenerator() {
   };
 
   const uploadPDF = async (file) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', 'qr_pdf_unsigned');
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  try {
+    console.log('Uploading to tmpfiles.org:', {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
     
-    try {
-      const response = await fetch('https://api.cloudinary.com/v1_1/dyau5koyt/raw/upload', {
-        method: 'POST',
-        body: formData
-      });
-      
-      const data = await response.json();
-      return data.secure_url || null;
-    } catch (error) {
-      console.error(error);
+    const response = await fetch('https://tmpfiles.org/api/v1/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    console.log('Response status:', response.status);
+    
+    if (!response.ok) {
+      console.error('Upload failed with status:', response.status);
       return null;
     }
-  };
-
+    
+    const data = await response.json();
+    console.log('Response data:', data);
+    
+    if (data.status === 'success' && data.data?.url) {
+      // Convert to direct download link
+      const url = data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+      console.log('Final URL:', url);
+      return url;
+    }
+    
+    console.error('Invalid response:', data);
+    return null;
+    
+  } catch (error) {
+    console.error('Upload error:', error);
+    return null;
+  }
+};
   const downloadQR = () => {
     const link = document.createElement('a');
     link.download = `qrcode-${type}-${Date.now()}.png`;
